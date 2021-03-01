@@ -65,8 +65,6 @@ app.put('/products/update/:id', jsonParser, (req, res)=>{
         category: body.category,
         stock: body.stock,
         price: body.price,
-        numOfRatings: 0,
-        stars: 0,
       }});
     res.send("Product updated");
 });
@@ -87,7 +85,7 @@ app.post('/register', jsonParser, async (req, res)=>{
 
     const user= await _db.collection('users').find( {email: body.email} ).toArray();
     if(user.length!=0){
-      res.json({status: "error", message:"There is already an account with this email registered"});
+      res.json({status: "error", message:"There is already an account with this email registered!"});
       return;
     }
 
@@ -100,6 +98,7 @@ app.post('/register', jsonParser, async (req, res)=>{
         adminPermission: false
       });
     });
+    res.json({status: "success", message:"Registered successfully!"});
 });
 
 app.post('/login', jsonParser, async (req,res)=>{
