@@ -49,8 +49,6 @@ app.get('/products/:pageNum/:itemsPerPage/:category?/:dir?/:orderBy?/:search?/',
   _db.collection('products').find( filter ).sort(sort).skip(parseInt(itemsPerPage)*(parseInt(pageNum)-1)).limit(parseInt(itemsPerPage)).toArray((err, results) => res.json({results}));
 });
 
-
-
 app.post('/products/create', jsonParser, (req, res)=>{
   let body=req.body;
   _db.collection('products').insertOne(body);
@@ -67,6 +65,8 @@ app.put('/products/update/:id', jsonParser, (req, res)=>{
         category: body.category,
         stock: body.stock,
         price: body.price,
+        numOfRatings: 0,
+        stars: 0,
       }});
     res.send("Product updated");
 });
@@ -119,7 +119,90 @@ app.post('/login', jsonParser, async (req,res)=>{
 });
 
 
+// ***********
+// Discout 
+// ***********
+
+app.get('/discount/code/:code', async (req, res)=>{
+  let discountCodes= await _db.collection("codes").find({ code: req.params.code}).toArray();
+  res.json(discountCodes);
+});
+
+app.get('/discount/search/:searchString', async (req, res)=>{
+  let searchString=new RegExp(req.params.searchString.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), "gi");
+  let discountCodes= await _db.collection("codes").find({ code: searchString}).toArray();
+  res.json(discountCodes);
+});
+
+app.post('/discount/create', jsonParser,(req, res)=>{
+  let body=req.body;
+  _db.collection("codes").insertOne({
+      code: body.code,
+      discountBy: body.discountBy,
+  });
+});
+
+app.delete('/discount/delete/:id', (req, res)=>{
+  _db.collection('codes').deleteOne(
+    { _id: ObjectId(req.params.id) }
+  );
+});
+
+// ***********
+// Rating routes
+// ***********
+
+app.get('/rate/view/:productId/:userId', async (req, res)=>{
+  let rating= await _db.collection("ratings").find( {userId: req.params.userId, productId: req.params.productId} ).toArray();
+  res.json(rating);
+});
+
+app.post("/rate/add/:productId/:userId", jsonParser, async (req, res)=>{
+  let body=req.body;
+  let rating = await _db.collection("ratings").find( {userId: req.params.userId, productId: req.params.productId} ).toArray();
+  let newRating=0;
+  let addStars=0;
+  // Check if the user already submitted a rating
+  if(rating.length!=0){
+    let oldRating=parseInt(rating[0].stars);
+
+    _db.collection("ratings").updateOne(
+      {userId: req.params.userId, productId: req.params.productId},
+      {$set:{
+          stars: parseInt(body.rating)+1,
+        }
+      }
+    );
+    addStars=(parseInt(body.rating)+1)-parseInt(oldRating);
+  } else{
+    newRating=1;
+    addStars=parseInt(body.rating)+1;
+
+    _db.collection("ratings").insertOne(
+      {
+       userId: req.params.userId, 
+       productId: req.params.productId,
+       stars: parseInt(body.rating)+1,
+      },
+    );
+  }
+
+  // Update in product
+  _db.collection("products").updateOne(
+    {_id: ObjectId(req.params.productId)},
+    {
+      $inc:{
+        stars: addStars,
+        numOfRatings: newRating,
+      }
+    }
+  );
+});
+
+
+// ***********
 // Dashboard routes
+// ***********
 
 app.get('/:coll/count', (req,res)=>{
     let collName=req.params.coll;
