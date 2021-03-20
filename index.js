@@ -45,7 +45,7 @@ app.get('/products/:pageNum/:itemsPerPage/:category?/:dir?/:orderBy?/:search?/',
    if(category != 'All') filter={ category: category}
    if(search != undefined) filter["name"]=new RegExp(search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), "gi");
    if(dir != 0 || orderBy!='none') sort[orderBy]=parseInt(dir); // if dir is 0, we don t need to sort
-
+  console.log(sort);
   _db.collection('products').find( filter ).sort(sort).skip(parseInt(itemsPerPage)*(parseInt(pageNum)-1)).limit(parseInt(itemsPerPage)).toArray((err, results) => res.json({results}));
 });
 
